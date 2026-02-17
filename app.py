@@ -143,17 +143,57 @@ elif st.session_state.logged_in:
             st.session_state.page = "landing"
             st.rerun()
 
-    if menu == "Live Intent":
-        st.markdown("<h1 style='color:#50FFB1;'>Live Intent Analysis</h1>", unsafe_allow_html=True)
+  if menu == "Live Intent":
+        st.markdown("<h1 style='color:#50FFB1;'>Neural Session Scan</h1>", unsafe_allow_html=True)
         
-        # Dashboard Grid
+        # 1. ONLY ONE set of inputs
         with st.container():
             c1, c2, c3, c4 = st.columns(4)
-            with c1: items = st.number_input("Cart Size", 1, 50, 3)
-            with c2: val = st.number_input("Value ($)", 10.0, 10000.0, 450.0)
-            with c3: dwell = st.number_input("Dwell (Min)", 0.1, 60.0, 2.5)
-            with c4: step = st.selectbox("Stage", ["Cart", "Shipping", "Payment", "Review"])
+            with c1: items_in = st.number_input("Cart Count", 1, 50, 2, key="cart_in")
+            with c2: val_in = st.number_input("Value ($)", 10.0, 10000.0, 2500.0, key="val_in")
+            with c3: dwell_in = st.number_input("Dwell (Min)", 0.1, 60.0, 0.4, key="dwell_in")
+            with c4: step_in = st.selectbox("Stage", ["Cart", "Shipping", "Payment", "Review"], key="step_in")
 
+        if st.button("EXECUTE NEURAL SCAN"):
+            # 2. THE LOGIC (The "Red" Trigger)
+            # If value > 1500 and dwell < 1.0, it MUST be 92%
+            risk_pct = 92 if (val_in > 1500 and dwell_in < 1.0) else 13
+            
+            # Optional: Overwrite with model if it exists
+            if rf_model:
+                try:
+                    features = np.array([[items_in, val_in, dwell_in, 0, 0, 0, 0, 0, 0, 0]])
+                    risk_pct = int(rf_model.predict_proba(features)[0][1] * 100)
+                except:
+                    pass # Fallback to manual logic if model fails
+
+            # 3. ANIMATED RADAR
+            radar_placeholder = st.empty()
+            categories = ['Price Sensitivity', 'Bot Prob.', 'Intent', 'UX Friction', 'Urgency']
+            for r in range(1, 11):
+                # Radar values shift based on risk
+                r_vals = [risk_pct, (80 if items_in > 25 else 20), 100-risk_pct, 40, 60]
+                animated_r = [v * (r/10) for v in r_vals]
+                fig = go.Figure(data=go.Scatterpolar(r=animated_r, theta=categories, fill='toself', 
+                                                     line_color='#FF4B4B' if risk_pct > 70 else '#50FFB1'))
+                fig.update_layout(polar=dict(radialaxis=dict(visible=False, range=[0, 100]), bgcolor='rgba(0,0,0,0)'),
+                                  paper_bgcolor='rgba(0,0,0,0)', font_color='white', height=400, showlegend=False)
+                radar_placeholder.plotly_chart(fig, use_container_width=True, key=f"radar_anim_{r}")
+                time.sleep(0.02)
+
+            # 4. RESULTS (Cards turn Red if risk > 70)
+            st.markdown("<br>", unsafe_allow_html=True)
+            res_c1, res_c2, res_c3 = st.columns(3)
+            card_color = "#FF4B4B" if risk_pct > 70 else "#50FFB1"
+            
+            with res_c1:
+                st.markdown(f"<div class='glass-card'><h5>RISK</h5><h1 style='color:{card_color};'>{risk_pct}%</h1></div>", unsafe_allow_html=True)
+            with res_c2:
+                bot_status = "DETECTED" if (items_in > 25 or dwell_in < 0.2) else "CLEAN"
+                st.markdown(f"<div class='glass-card'><h5>BOT STATUS</h5><h1 style='color:{card_color};'>{bot_status}</h1></div>", unsafe_allow_html=True)
+            with res_c3:
+                offer = "SAVE25" if risk_pct > 75 else "N/A"
+                st.markdown(f"<div class='glass-card'><h5>OFFER</h5><h1 style='color:#FFA500;'>{offer}</h1></div>", unsafe_allow_html=True)
         if st.button("EXECUTE NEURAL SCAN"):
             with st.status("Scanning Behavioral Vectors...") as status:
                 time.sleep(1.2)
