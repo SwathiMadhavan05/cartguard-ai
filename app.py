@@ -8,9 +8,9 @@ import time
 import os
 
 # =====================================================
-# 1. THE ULTIMATE UI CONFIGURATION (CSS OVERHAUL)
+# 1. ADVANCED CSS & GLASSMORPHISM OVERHAUL
 # =====================================================
-st.set_page_config(page_title="CartGuard AI | Portal", layout="wide")
+st.set_page_config(page_title="CartGuard AI | Enterprise", layout="wide")
 
 LOGO_PATH = "logo.jpg" 
 
@@ -18,106 +18,84 @@ st.markdown("""
     <style>
     @import url('https://fonts.cdnfonts.com/css/satoshi');
     
-    /* Global Styles */
+    /* Background & Global Fonts */
     .stApp { 
-        background: radial-gradient(circle at 50% 50%, #0a0e91 0%, #050761 100%);
+        background: radial-gradient(circle at 50% 50%, #0a1191 0%, #050730 100%);
         color: white; 
         font-family: 'Satoshi', sans-serif !important;
     }
 
-    /* Animated Background Elements */
-    .bg-glow {
-        position: fixed;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background: url('https://www.transparenttextures.com/patterns/carbon-fibre.png');
-        opacity: 0.1;
-        z-index: -1;
-    }
-
-    /* Glassmorphism Login Container */
-    .login-card {
+    /* Glassmorphism Containers */
+    .glass-card {
         background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(20px);
+        backdrop-filter: blur(15px);
         border: 1px solid rgba(80, 255, 177, 0.2);
-        padding: 40px;
-        border-radius: 30px;
-        box-shadow: 0 25px 50px rgba(0,0,0,0.5);
-        text-align: center;
-        margin-top: 50px;
-    }
-
-    /* Typography & Effects */
-    .hero-text {
-        font-size: 4.5rem;
-        font-weight: 900;
-        background: linear-gradient(to bottom, #50FFB1, #39d38d);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 0;
-        letter-spacing: -2px;
-    }
-
-    .sub-text {
-        font-size: 1.1rem;
-        letter-spacing: 4px;
-        text-transform: uppercase;
-        color: rgba(255,255,255,0.6);
-        margin-top: -10px;
-    }
-
-    /* Custom Input Styling (Forcing Dark Mode Look) */
-    div[data-baseweb="input"] {
-        background-color: rgba(255,255,255,0.05) !important;
-        border: 1px solid rgba(80, 255, 177, 0.3) !important;
-        border-radius: 12px !important;
-        color: white !important;
-    }
-    
-    input {
-        color: white !important;
-        font-weight: 500 !important;
-    }
-
-    label {
-        color: #50FFB1 !important;
-        text-transform: uppercase;
-        font-size: 0.8rem !important;
-        letter-spacing: 1px;
-    }
-
-    /* The "Power" Button */
-    div.stButton > button {
-        background: linear-gradient(90deg, #50FFB1, #39d38d) !important;
-        color: #050761 !important; 
-        font-weight: 800 !important;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        border-radius: 15px !important;
-        border: none !important;
-        height: 3rem !important;
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-    
-    div.stButton > button:hover {
-        transform: scale(1.05);
-        box-shadow: 0px 0px 30px rgba(80, 255, 177, 0.5);
+        padding: 25px;
+        border-radius: 25px;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+        margin-bottom: 20px;
+        animation: fadeInUp 0.8s ease-out;
     }
 
     /* Animations */
-    @keyframes slideUp {
-        from { opacity: 0; transform: translateY(40px); }
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(30px); }
         to { opacity: 1; transform: translateY(0); }
     }
-    .animate-in { animation: slideUp 1s ease-out; }
+
+    @keyframes pulse-glow {
+        0% { box-shadow: 0 0 0 0 rgba(80, 255, 177, 0.4); }
+        70% { box-shadow: 0 0 0 15px rgba(80, 255, 177, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(80, 255, 177, 0); }
+    }
+
+    /* Buttons & Inputs */
+    div.stButton > button {
+        background: linear-gradient(90deg, #50FFB1, #39d38d) !important;
+        color: #050730 !important; 
+        font-weight: 800 !important;
+        border-radius: 15px !important;
+        border: none !important;
+        height: 3.5rem !important;
+        transition: 0.4s ease;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    div.stButton > button:hover {
+        transform: scale(1.03);
+        animation: pulse-glow 1.5s infinite;
+    }
+
+    /* Step Indicators */
+    .step-box { padding: 10px; border-radius: 10px; text-align: center; font-size: 0.8rem; }
+    .step-active { background: #50FFB1; color: #050730; font-weight: bold; }
+    .step-inactive { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.4); }
+
+    /* Custom Logos/Text */
+    .hero-title { font-size: 5rem; font-weight: 900; color: #50FFB1; letter-spacing: -3px; line-height: 1; }
     </style>
-    <div class="bg-glow"></div>
     """, unsafe_allow_html=True)
 
 # =====================================================
-# 2. APP STATE & ROUTING
+# 2. SESSION & ASSET MANAGEMENT
 # =====================================================
 if "page" not in st.session_state: st.session_state.page = "landing"
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
+
+@st.cache_resource
+def load_models():
+    try:
+        rf = joblib.load("rf_abandonment_model.pkl")
+        arima = joblib.load("arima_model.pkl")
+        return rf, arima
+    except: return None, None
+
+rf_model, arima_model = load_models()
+
+# =====================================================
+# 3. ROUTING LOGIC
+# =====================================================
 
 # --- LANDING PAGE ---
 if st.session_state.page == "landing":
@@ -126,63 +104,110 @@ if st.session_state.page == "landing":
     with col_logo:
         if os.path.exists(LOGO_PATH): st.image(LOGO_PATH, use_container_width=True)
     
-    st.markdown("<div class='animate-in'><h1 class='hero-text' style='text-align:center;'>CARTGUARD</h1><p class='sub-text' style='text-align:center;'>AI Revenue Protection</p></div>", unsafe_allow_html=True)
+    st.markdown("<h1 class='hero-title' style='text-align:center;'>CARTGUARD</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center; letter-spacing:5px; opacity:0.6;'>NEURAL REVENUE PROTECTION</p>", unsafe_allow_html=True)
     
-    st.markdown("<br><br>", unsafe_allow_html=True)
     _, col_btn, _ = st.columns([1.2, 0.6, 1.2])
     with col_btn:
-        if st.button("INITIALIZE TERMINAL"):
+        if st.button("INITIALIZE SYSTEM"):
             st.session_state.page = "login"
             st.rerun()
 
-# --- NEW IMPRESSIVE LOGIN PAGE ---
+# --- LOGIN PAGE ---
 elif st.session_state.page == "login" and not st.session_state.logged_in:
     st.markdown("<br><br><br>", unsafe_allow_html=True)
-    _, col_login, _ = st.columns([1, 1.2, 1])
-    
+    _, col_login, _ = st.columns([1, 1, 1])
     with col_login:
-        st.markdown("""
-            <div class='login-card animate-in'>
-                <h2 style='color: #50FFB1; margin-bottom: 5px;'>SECURITY CLEARANCE</h2>
-                <p style='color: rgba(255,255,255,0.5); font-size: 0.9rem;'>Level 4 Encrypted Access Required</p>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        # We wrap inputs in a container to maintain styling
-        with st.container():
-            st.markdown("<br>", unsafe_allow_html=True)
-            u = st.text_input("ADMINISTRATOR ID", placeholder="Enter ID...")
-            p = st.text_input("ACCESS KEY", type="password", placeholder="••••••••")
-            st.markdown("<br>", unsafe_allow_html=True)
-            if st.button("AUTHORIZE ACCESS"):
-                if u == "admin" and p == "admin123":
-                    with st.spinner("Decrypting Dashboard..."):
-                        time.sleep(1.5)
-                        st.session_state.logged_in = True
-                        st.rerun()
-                else:
-                    st.error("ACCESS DENIED: Invalid Credentials")
+        st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
+        st.markdown("<h2 style='color:#50FFB1; margin-top:0;'>SECURE LOGIN</h2>", unsafe_allow_html=True)
+        u = st.text_input("ADMIN ID")
+        p = st.text_input("ACCESS KEY", type="password")
+        if st.button("AUTHORIZE"):
+            if u == "admin" and p == "admin123":
+                with st.spinner("Decrypting Nodes..."):
+                    time.sleep(1.5)
+                    st.session_state.logged_in = True
+                    st.rerun()
+            else: st.error("Access Denied")
+        st.markdown("</div>", unsafe_allow_html=True)
 
-# --- DASHBOARD (保持原功能不变) ---
+# --- DASHBOARD ---
 elif st.session_state.logged_in:
-    # (Existing Dashboard Code stays here...)
     with st.sidebar:
-        if os.path.exists(LOGO_PATH): st.image(LOGO_PATH, width=100)
-        st.markdown("<h3 style='color:#50FFB1;'>Command Center</h3>", unsafe_allow_html=True)
-        menu = st.sidebar.selectbox("MODULE", ["Live Intelligence", "Journey Mapping"])
+        if os.path.exists(LOGO_PATH): st.image(LOGO_PATH, width=80)
+        st.markdown("<h2 style='color:#50FFB1;'>CartGuard</h2>", unsafe_allow_html=True)
+        menu = st.radio("NAVIGATION", ["Live Intent", "Journey Mapping", "Global Forecast"])
+        st.markdown("---")
         if st.button("SHUTDOWN"):
             st.session_state.logged_in = False
             st.session_state.page = "landing"
             st.rerun()
 
-    if menu == "Live Intelligence":
-        st.markdown("<h1>Live Intelligence</h1>", unsafe_allow_html=True)
-        c1, c2, c3, c4 = st.columns(4)
-        with c1: items = st.number_input("Cart Items", 1, 100, 3)
-        with c2: val = st.number_input("Cart Value ($)", 1.0, 50000.0, 450.0)
-        with c3: dwell = st.number_input("Dwell Time (Min)", 0.1, 60.0, 5.0)
-        with c4: step = st.selectbox("Current Step", ["Cart Review", "Shipping Info", "Payment Method", "Final Review"])
+    if menu == "Live Intent":
+        st.markdown("<h1 style='color:#50FFB1;'>Live Intent Analysis</h1>", unsafe_allow_html=True)
+        
+        # Dashboard Grid
+        with st.container():
+            c1, c2, c3, c4 = st.columns(4)
+            with c1: items = st.number_input("Cart Size", 1, 50, 3)
+            with c2: val = st.number_input("Value ($)", 10.0, 10000.0, 450.0)
+            with c3: dwell = st.number_input("Dwell (Min)", 0.1, 60.0, 2.5)
+            with c4: step = st.selectbox("Stage", ["Cart", "Shipping", "Payment", "Review"])
 
-        if st.button("RUN NEURAL SCAN"):
-            st.write("Scan Initiated...")
-            # (Rest of the analysis logic from previous version goes here)
+        if st.button("EXECUTE NEURAL SCAN"):
+            with st.status("Scanning Behavioral Vectors...") as status:
+                time.sleep(1.2)
+                # Prediction Logic
+                is_bot = (items > 30 and dwell < 0.2) or (val > 8000)
+                risk_pct = 88 if (val > 1000 and dwell < 0.5) else 24
+                if rf_model:
+                    features = np.array([[items, val, dwell, 0, 0, 0, 0, 0, 0, 0]])
+                    risk_pct = int(rf_model.predict_proba(features)[0][1] * 100)
+                status.update(label="Analysis Complete", state="complete")
+
+            # --- JOURNEY PATH ---
+            st.markdown("### 🗺️ Live Pathing")
+            steps = ["Cart", "Shipping", "Payment", "Review"]
+            step_cols = st.columns(len(steps))
+            for i, s in enumerate(steps):
+                style = "step-active" if s == step else "step-inactive"
+                step_cols[i].markdown(f"<div class='step-box {style}'>{s}</div>", unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # --- METRIC CARDS ---
+            res_c1, res_c2, res_c3 = st.columns(3)
+            with res_c1:
+                color = "#FF4B4B" if risk_pct > 70 else "#50FFB1"
+                st.markdown(f"<div class='glass-card'><h4>RISK</h4><h1 style='color:{color};'>{risk_pct}%</h1></div>", unsafe_allow_html=True)
+            with res_c2:
+                st.markdown(f"<div class='glass-card'><h4>FRICTION</h4><h1 style='color:#FFA500;'>{step}</h1></div>", unsafe_allow_html=True)
+            with res_c3:
+                recovery = "SAVE20" if risk_pct > 70 else "N/A"
+                st.markdown(f"<div class='glass-card'><h4>OFFER</h4><h1 style='color:#50FFB1;'>{recovery}</h1></div>", unsafe_allow_html=True)
+
+            # --- VISUALS ---
+            v1, v2 = st.columns(2)
+            with v1:
+                st.markdown("### Risk Attribution")
+                fig = px.bar(x=[risk_pct, 100-risk_pct], y=["Abandon", "Convert"], orientation='h', color_discrete_sequence=['#50FFB1'])
+                fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='white', height=250)
+                st.plotly_chart(fig, use_container_width=True)
+            with v2:
+                st.markdown("### Session Heatmap")
+                st.plotly_chart(px.imshow(np.random.rand(5,5), color_continuous_scale='Viridis').update_layout(height=250, margin=dict(l=0,r=0,t=0,b=0)), use_container_width=True)
+
+    elif menu == "Journey Mapping":
+        st.markdown("<h1 style='color:#50FFB1;'>Journey Analytics</h1>", unsafe_allow_html=True)
+        
+        funnel_data = pd.DataFrame(dict(number=[1000, 750, 400, 150], stage=["Cart", "Shipping", "Payment", "Purchase"]))
+        fig = px.funnel(funnel_data, x='number', y='stage', color_discrete_sequence=['#50FFB1'])
+        fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='white')
+        st.plotly_chart(fig, use_container_width=True)
+
+    elif menu == "Global Forecast":
+        st.markdown("<h1 style='color:#50FFB1;'>Revenue Forecast</h1>", unsafe_allow_html=True)
+        if arima_model:
+            forecast = arima_model.forecast(steps=14)
+            st.line_chart(forecast)
+        else: st.warning("Forecast model (arima_model.pkl) missing.")
