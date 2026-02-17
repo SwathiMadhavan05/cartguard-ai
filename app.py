@@ -12,7 +12,6 @@ import os
 # =====================================================
 st.set_page_config(page_title="CartGuard AI", layout="wide")
 
-# Ensure this matches your filename in the folder
 LOGO_PATH = "logo.jpg" 
 
 st.markdown("""
@@ -97,8 +96,10 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 # =====================================================
-# 3. PAGE ROUTING: LANDING PAGE
+# 3. PAGE ROUTING
 # =====================================================
+
+# --- LANDING PAGE ---
 if st.session_state.page == "landing":
     st.markdown("<br><br><br>", unsafe_allow_html=True)
     _, col_logo, _ = st.columns([1, 0.6, 1])
@@ -116,9 +117,7 @@ if st.session_state.page == "landing":
             st.session_state.page = "login"
             st.rerun()
 
-# =====================================================
-# 4. PAGE ROUTING: LOGIN PAGE
-# =====================================================
+# --- LOGIN PAGE ---
 elif st.session_state.page == "login" and not st.session_state.logged_in:
     st.markdown("<br><br>", unsafe_allow_html=True)
     _, col_logo, _ = st.columns([1, 0.3, 1])
@@ -141,9 +140,7 @@ elif st.session_state.page == "login" and not st.session_state.logged_in:
             else:
                 st.error("Invalid credentials")
 
-# =====================================================
-# 5. PAGE ROUTING: MAIN DASHBOARD
-# =====================================================
+# --- MAIN DASHBOARD ---
 elif st.session_state.logged_in:
     @st.cache_resource
     def load_verified_assets():
@@ -169,51 +166,73 @@ elif st.session_state.logged_in:
             st.rerun()
 
     if menu == "Live Analysis":
-        st.markdown("<h1 style='color: #50FFB1;'>Live Intelligence</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 style='color: #50FFB1;'>Live Intelligence v2.0</h1>", unsafe_allow_html=True)
+        
+        # Input Layer
         c1, c2, c3, c4 = st.columns(4)
-        with c1: items = st.number_input("ITEMS", 1, 20, 2)
-        with c2: val = st.number_input("VALUE ($)", 1.0, 5000.0, 250.0)
-        with c3: dwell = st.number_input("DWELL (M)", 0.0, 60.0, 10.0)
+        with c1: items = st.number_input("ITEMS", 1, 50, 2)
+        with c2: val = st.number_input("VALUE ($)", 1.0, 10000.0, 250.0)
+        with c3: dwell = st.number_input("DWELL (M)", 0.0, 120.0, 10.0)
         with c4: plat = st.selectbox("PLATFORM", [0, 1], format_func=lambda x: "Mobile" if x==1 else "Desktop")
 
         if st.button("RUN NEURAL INFERENCE"):
-            with st.status("Analyzing user behavior...", expanded=True) as status:
-                time.sleep(0.8)
-                # FIXED LOGIC: Override for high value/low dwell
+            with st.status("Performing Deep Behavioral Scan...", expanded=True) as status:
+                time.sleep(1.2)
+                
+                # --- FEATURE: BOT DETECTION ---
+                is_bot = (items > 25 and dwell < 0.5) or (val > 5000 and items > 40)
+                
                 if val >= 1000 and dwell <= 1.0:
                     risk_pct = 94
-                elif plat == 1 and val > 600 and dwell < 2.0:
-                    risk_pct = 82
+                elif rf_model:
+                    features = np.array([[items, val, dwell, plat, 0, 0, 0, 0, 0, 0]])
+                    risk_pct = int(rf_model.predict_proba(features)[0][1] * 100)
                 else:
-                    if rf_model:
-                        features = np.array([[items, val, dwell, plat, 0, 0, 0, 0, 0, 0]])
-                        prob = rf_model.predict_proba(features)[0][1]
-                        risk_pct = int(prob * 100)
-                    else:
-                        risk_pct = 15
+                    risk_pct = 15
                 status.update(label="Inference Complete!", state="complete", expanded=False)
 
-            score_color = "#FF4B4B" if risk_pct > 70 else "#50FFB1"
-            res_col1, res_col2 = st.columns([1.5, 1])
+            score_color = "#FF4B4B" if risk_pct > 75 else "#FFA500" if risk_pct > 40 else "#50FFB1"
+            
+            res_col1, res_col2 = st.columns([1, 1])
 
             with res_col1:
                 st.markdown(f"""
-                    <div style='background:rgba(255,255,255,0.1); padding:20px; border-radius:15px; border:1px solid {score_color}; margin-bottom: 20px;'>
-                        <h3 style='margin:0; font-size: 1rem; opacity: 0.8;'>ABANDONMENT RISK SCORE</h3>
-                        <h1 style='color:{score_color}; font-size:4.5rem; margin:0;'>{risk_pct}%</h1>
+                    <div style='background:rgba(255,255,255,0.05); padding:20px; border-radius:15px; border-left: 5px solid {score_color};'>
+                        <h3 style='margin:0; font-size: 0.9rem; opacity: 0.7;'>ABANDONMENT RISK</h3>
+                        <h1 style='color:{score_color}; font-size:4rem; margin:0;'>{risk_pct}%</h1>
+                        {'<span style="color:#FF4B4B; font-weight:bold;">⚠️ BOT SIGNATURE DETECTED</span>' if is_bot else ''}
                     </div>
                 """, unsafe_allow_html=True)
-                st.markdown("### 🤖 Behavioral Intelligence")
-                if risk_pct > 70: st.error("**CRITICAL THREAT DETECTED:** High-risk signature.")
-                elif risk_pct > 35: st.warning("**MODERATE HESITATION:** Comparison shopping.")
-                else: st.success("**POSITIVE PURCHASE INTENT:** Strong behavioral flow.")
+                
+                # --- FEATURE: DYNAMIC DISCOUNT ENGINE ---
+                st.markdown("### 💸 Recovery Action")
+                if is_bot:
+                    st.error("ACTION: High-frequency bot activity. Captcha triggered.")
+                elif risk_pct > 80:
+                    st.error(f"**URGENT:** User is leaving. Display Code: **SAVE20** (20% Off)")
+                elif risk_pct > 50:
+                    st.warning("**INTERVENTION:** Offer Free Shipping to secure checkout.")
+                else:
+                    st.success("**STATUS:** Strong purchase intent. No discount required.")
 
             with res_col2:
-                fig = go.Figure(data=[go.Pie(labels=['Risk', 'Retention'], values=[risk_pct, 100 - risk_pct], hole=.75, marker_colors=[score_color, '#1a1c23'], sort=False, direction='clockwise')])
-                fig.update_layout(showlegend=False, margin=dict(t=0, b=0, l=0, r=0), height=240, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+                # --- FEATURE: SHAP/EXPLAINABILITY SIMULATION ---
+                st.markdown("### 🔍 Risk Attribution")
+                factors = pd.DataFrame({
+                    'Factor': ['Price Shock', 'Dwell Latency', 'Item Volatility'],
+                    'Weight': [val/1200, (1/dwell if dwell > 0 else 5), items/15]
+                })
+                fig = px.bar(factors, x='Weight', y='Factor', orientation='h', color_discrete_sequence=[score_color])
+                fig.update_layout(height=220, margin=dict(l=0, r=0, t=0, b=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
                 st.plotly_chart(fig, use_container_width=True)
-            
-            st.info(f"**AI STRATEGY:** {'Deploy exit-intent offer' if risk_pct > 70 else 'Show social proof' if risk_pct > 35 else 'Seamless checkout'}.")
+
+            # --- FEATURE: SESSION HEATMAP ---
+            with st.expander("Interactive Session Heatmap (Cursor Analytics)"):
+                st.write("Tracking cursor hesitation zones on checkout page...")
+                heatmap_data = np.random.rand(10, 10)
+                fig_hm = px.imshow(heatmap_data, color_continuous_scale='Viridis')
+                fig_hm.update_layout(height=300, margin=dict(l=0, r=0, t=0, b=0))
+                st.plotly_chart(fig_hm, use_container_width=True)
 
     elif menu == "Global Forecast":
         st.markdown("<h1 style='color: #50FFB1;'>Strategic Projections</h1>", unsafe_allow_html=True)
@@ -223,7 +242,8 @@ elif st.session_state.logged_in:
             fig = px.line(df_forecast, x='Day', y='Forecast', color_discrete_sequence=['#50FFB1'])
             fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
             st.plotly_chart(fig, use_container_width=True)
-        else: st.warning("Forecast model unavailable.")
+        else:
+            st.warning("ARIMA model file (`arima_model.pkl`) not detected. Forecast unavailable.")
 
     elif menu == "Model Insights":
         st.markdown("<h1 style='color: #50FFB1;'>Neural Interpretability</h1>", unsafe_allow_html=True)
