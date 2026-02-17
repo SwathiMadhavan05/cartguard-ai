@@ -147,6 +147,68 @@ elif st.session_state.logged_in:
     if menu == "Live Intent":
         st.markdown("<h1 style='color:#50FFB1;'>Neural Session Scan</h1>", unsafe_allow_html=True)
         
+        # UI Inputs
+        with st.container():
+            c1, c2, c3, c4 = st.columns(4)
+            with c1: items = st.number_input("Cart Count", 1, 50, 3)
+            with c2: val = st.number_input("Session Value ($)", 10.0, 10000.0, 450.0)
+            with c3: dwell = st.number_input("Active Dwell (Min)", 0.1, 60.0, 4.5)
+            with c4: step = st.selectbox("Current Node", ["Cart", "Shipping", "Payment", "Final"])
+
+        if st.button("RUN INFERENCE"):
+            # 1. Prediction Calculation
+            risk_target = 92 if (val > 1500 and dwell < 1.0) else 18
+            if rf_model:
+                features = np.array([[items, val, dwell, 0, 0, 0, 0, 0, 0, 0]])
+                risk_target = int(rf_model.predict_proba(features)[0][1] * 100)
+            
+            # 2. Animated Bar growth loop
+            bar_placeholder = st.empty()
+            
+            # This loop creates the "filling up" animation effect
+            for i in range(0, risk_target + 2, 2):  # Counting by 2 for smoothness
+                current_val = min(i, risk_target)
+                fig = go.Figure(go.Bar(
+                    x=[current_val, 100 - current_val],
+                    y=["Abandon ", "Convert "],
+                    orientation='h',
+                    marker_color=['#FF4B4B', '#50FFB1'],
+                    text=[f"{current_val}%", f"{100-current_val}%"],
+                    textposition='inside'
+                ))
+                fig.update_layout(
+                    paper_bgcolor='rgba(0,0,0,0)', 
+                    plot_bgcolor='rgba(0,0,0,0)', 
+                    font_color='white',
+                    height=250,
+                    xaxis=dict(range=[0, 100], showgrid=False, zeroline=False, showticklabels=False),
+                    yaxis=dict(showgrid=False, zeroline=False),
+                    margin=dict(l=0, r=0, t=0, b=0),
+                    showlegend=False
+                )
+                bar_placeholder.plotly_chart(fig, use_container_width=True, key=f"anim_{i}")
+                time.sleep(0.01) # Speed of the fill effect
+
+            # 3. Journey Path Indicators
+            st.markdown("### 🗺️ Live Progression Path")
+            steps = ["Cart", "Shipping", "Payment", "Final"]
+            step_cols = st.columns(len(steps))
+            for i, s in enumerate(steps):
+                active = "step-active" if s == step else "step-inactive"
+                step_cols[i].markdown(f"<div class='step-box {active}'>{s}</div>", unsafe_allow_html=True)
+
+            # 4. Final Metric Cards
+            st.markdown("<br>", unsafe_allow_html=True)
+            res_c1, res_c2, res_c3 = st.columns(3)
+            with res_c1:
+                r_color = "#FF4B4B" if risk_target > 70 else "#50FFB1"
+                st.markdown(f"<div class='glass-card'><h5>RISK SCORE</h5><h1 style='color:{r_color}; font-size:3rem;'>{risk_target}%</h1></div>", unsafe_allow_html=True)
+            with res_c2:
+                st.markdown(f"<div class='glass-card'><h5>BOT STATUS</h5><h1 style='color:#50FFB1;'>{'DETECTED' if items > 30 else 'CLEAN'}</h1></div>", unsafe_allow_html=True)
+            with res_c3:
+                offer = "SAVE25" if risk_target > 75 else "FREE_SHIP"
+                st.markdown(f"<div class='glass-card'><h5>AUTO-RECOVERY</h5><h1 style='color:#FFA500;'>{offer}</h1></div>", unsafe_allow_html=True)
+        
         # Grid Controls
         with st.container():
             c1, c2, c3, c4 = st.columns(4)
